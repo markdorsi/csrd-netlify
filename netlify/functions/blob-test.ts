@@ -1,6 +1,14 @@
 import type { Handler, Context } from '@netlify/functions'
 import { getStore, getDeployStore, listStores } from '@netlify/blobs'
 
+// Store creation with explicit configuration
+interface StoreOptions {
+  siteID?: string;
+  token?: string;
+  deployID?: string;
+  consistency?: 'strong' | 'eventual';
+}
+
 const STORE_NAME = 'test-store'
 const TEST_KEY = 'test-data'
 
@@ -43,32 +51,61 @@ function getBlobStore() {
 
   const siteId = process.env.SITE_ID || process.env.NETLIFY_SITE_ID
   const deployId = process.env.DEPLOY_ID
+  const token = process.env.NETLIFY_FUNCTIONS_TOKEN
 
-  // Try global store with siteID (token should be auto-provided in Netlify context)
-  if (siteId) {
-    console.log('🔍 STEP 2: Attempting global store with manual siteID...')
-    storeCreationResults.attempted.push('global-manual')
+  console.log('Available credentials:', {
+    siteId: siteId ? 'Present' : 'Missing',
+    deployId: deployId ? 'Present' : 'Missing',
+    token: token ? 'Present' : 'Missing'
+  })
+
+  // Try global store with siteID and token (now that we found the token!)
+  if (siteId && token) {
+    console.log('🔍 STEP 2: Attempting global store with siteID and token...')
+    storeCreationResults.attempted.push('global-with-credentials')
 
     try {
-      console.log(`🔍 Using siteID: ${siteId}`)
-      // According to the Netlify Blobs docs, in a Netlify Function the token should be auto-provided
-      // Try with consistency option first to see if that helps
-      const globalStore = getStore(STORE_NAME, { consistency: 'eventual' })
-      console.log('✅ STEP 2 SUCCESS: Global store with manual siteID created')
-      storeCreationResults.success = 'global-manual'
-      return globalStore
+      console.log(`🔍 Using siteID: ${siteId} and token: ${token.substring(0, 8)}...`)
+
+      // Try creating store with manual credentials
+      // Set environment variables for the Blobs SDK to use
+      const originalSiteId = process.env.NETLIFY_SITE_ID
+      const originalToken = process.env.NETLIFY_BLOBS_TOKEN
+
+      // Temporarily set the environment variables the SDK expects
+      process.env.NETLIFY_SITE_ID = siteId
+      process.env.NETLIFY_BLOBS_TOKEN = token
+
+      try {
+        const globalStore = getStore(STORE_NAME)
+        console.log('✅ STEP 2 SUCCESS: Global store with credentials created')
+        storeCreationResults.success = 'global-with-credentials'
+        return globalStore
+      } finally {
+        // Restore original environment variables
+        if (originalSiteId) {
+          process.env.NETLIFY_SITE_ID = originalSiteId
+        } else {
+          delete process.env.NETLIFY_SITE_ID
+        }
+        if (originalToken) {
+          process.env.NETLIFY_BLOBS_TOKEN = originalToken
+        } else {
+          delete process.env.NETLIFY_BLOBS_TOKEN
+        }
+      }
     } catch (globalError) {
-      console.log('❌ STEP 2 FAILED: Global store with manual siteID failed')
+      console.log('❌ STEP 2 FAILED: Global store with credentials failed')
       console.log('Global store error details:', {
         message: (globalError as Error).message,
         name: (globalError as Error).name,
         stack: (globalError as Error).stack
       })
-      storeCreationResults.failed.push({ type: 'global-manual', error: (globalError as Error).message })
+      storeCreationResults.failed.push({ type: 'global-with-credentials', error: (globalError as Error).message })
     }
   } else {
-    console.log('❌ STEP 2 SKIPPED: No siteID available for global store')
-    storeCreationResults.failed.push({ type: 'global-manual', error: 'No siteID available' })
+    console.log('❌ STEP 2 SKIPPED: Missing siteID or token for global store')
+    storeCreationResults.failed.push({ type: 'global-with-credentials', error: 'Missing siteID or token' })
   }
 
   // Try deploy store with deployID
