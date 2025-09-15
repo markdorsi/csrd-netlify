@@ -20,9 +20,12 @@ function App() {
             transparent, adjustable factors.
           </p>
 
-          <div style={{ marginTop: '32px' }}>
+          <div style={{ marginTop: '32px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             <Link to="/estimate" className="btn btn-primary">
               Start New Estimate
+            </Link>
+            <Link to="/blobtest" className="btn btn-outline">
+              🧪 Test Blob Storage
             </Link>
           </div>
         </div>
