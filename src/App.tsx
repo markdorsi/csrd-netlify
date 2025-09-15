@@ -25,7 +25,7 @@ function App() {
               Start New Estimate
             </Link>
             <Link to="/blobtest" className="btn btn-outline">
-              🧪 Test Blob Storage
+              🗄️ View Stored Data
             </Link>
           </div>
         </div>
