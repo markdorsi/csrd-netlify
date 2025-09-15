@@ -13,7 +13,13 @@
 [build.processing]
   skip_processing = false
 
-# SPA redirect for single page applications
+# API redirects for Netlify Functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA redirect for single page applications (must come after API redirects)
 [[redirects]]
   from = "/*"
   to = "/index.html"
