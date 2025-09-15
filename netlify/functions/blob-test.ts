@@ -1,11 +1,22 @@
-import type { Handler } from '@netlify/functions'
+import type { Handler, Context } from '@netlify/functions'
 import { getStore, getDeployStore, listStores } from '@netlify/blobs'
 
 const STORE_NAME = 'test-store'
 const TEST_KEY = 'test-data'
 
 function getBlobStore() {
-  console.log('🔍 STEP 1: Checking environment variables')
+  console.log('🔍 STEP 1: Checking ALL environment variables')
+
+  // Log ALL environment variables to see what's available
+  const allEnvVars = Object.keys(process.env).reduce((acc, key) => {
+    if (key.includes('NETLIFY') || key.includes('SITE') || key.includes('DEPLOY') || key.includes('CONTEXT') || key.includes('BLOB')) {
+      acc[key] = process.env[key]
+    }
+    return acc
+  }, {} as Record<string, string | undefined>)
+
+  console.log('Netlify-related environment variables:', allEnvVars)
+
   const env = {
     CONTEXT: process.env.CONTEXT,
     NODE_ENV: process.env.NODE_ENV,
@@ -13,9 +24,13 @@ function getBlobStore() {
     SITE_ID: process.env.SITE_ID,
     NETLIFY_DEV: process.env.NETLIFY_DEV,
     AWS_REGION: process.env.AWS_REGION,
-    AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME
+    AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME,
+    // Check for additional Netlify-specific vars
+    NETLIFY: process.env.NETLIFY,
+    NETLIFY_SITE_ID: process.env.NETLIFY_SITE_ID,
+    URL: process.env.URL
   }
-  console.log('Environment variables:', env)
+  console.log('Key environment variables:', env)
 
   let storeCreationResults: any = {
     attempted: [],
@@ -23,46 +38,48 @@ function getBlobStore() {
     success: null
   }
 
-  // Try global store first
-  console.log('🔍 STEP 2: Attempting to create global store...')
+  // Try basic global store (should work in Netlify Functions)
+  console.log('🔍 STEP 2: Attempting basic global store...')
   storeCreationResults.attempted.push('global')
 
   try {
+    console.log('🔍 Calling getStore with just store name...')
     const globalStore = getStore(STORE_NAME)
     console.log('✅ STEP 2 SUCCESS: Global store created')
     storeCreationResults.success = 'global'
     return globalStore
   } catch (globalError) {
-    console.log('❌ STEP 2 FAILED: Global store creation failed')
+    console.log('❌ STEP 2 FAILED: Global store failed')
     console.log('Global store error details:', {
       message: (globalError as Error).message,
       name: (globalError as Error).name,
       stack: (globalError as Error).stack
     })
     storeCreationResults.failed.push({ type: 'global', error: (globalError as Error).message })
-
-    // Try deploy store as fallback
-    console.log('🔍 STEP 3: Attempting deploy store fallback...')
-    storeCreationResults.attempted.push('deploy')
-
-    try {
-      const deployStore = getDeployStore(STORE_NAME)
-      console.log('✅ STEP 3 SUCCESS: Deploy store created')
-      storeCreationResults.success = 'deploy'
-      return deployStore
-    } catch (deployError) {
-      console.log('❌ STEP 3 FAILED: Deploy store creation also failed')
-      console.log('Deploy store error details:', {
-        message: (deployError as Error).message,
-        name: (deployError as Error).name,
-        stack: (deployError as Error).stack
-      })
-      storeCreationResults.failed.push({ type: 'deploy', error: (deployError as Error).message })
-
-      console.log('💥 FINAL RESULT: Both store types failed')
-      throw new Error(`Both stores failed. Results: ${JSON.stringify(storeCreationResults, null, 2)}`)
-    }
   }
+
+  // Try basic deploy store
+  console.log('🔍 STEP 3: Attempting basic deploy store...')
+  storeCreationResults.attempted.push('deploy')
+
+  try {
+    console.log('🔍 Calling getDeployStore with just store name...')
+    const deployStore = getDeployStore(STORE_NAME)
+    console.log('✅ STEP 3 SUCCESS: Deploy store created')
+    storeCreationResults.success = 'deploy'
+    return deployStore
+  } catch (deployError) {
+    console.log('❌ STEP 3 FAILED: Deploy store failed')
+    console.log('Deploy store error details:', {
+      message: (deployError as Error).message,
+      name: (deployError as Error).name,
+      stack: (deployError as Error).stack
+    })
+    storeCreationResults.failed.push({ type: 'deploy', error: (deployError as Error).message })
+  }
+
+  console.log('💥 FINAL RESULT: All store creation attempts failed')
+  throw new Error(`All stores failed. Results: ${JSON.stringify(storeCreationResults, null, 2)}`)
 }
 
 export const handler: Handler = async (event, context) => {
