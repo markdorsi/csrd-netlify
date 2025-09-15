@@ -1,7 +1,7 @@
 import type { Handler } from '@netlify/functions'
-import { getRun } from '../../src/lib/simple-storage'
+import { getRun } from '../../src/lib/function-storage'
 
-console.log('✅ Get-run function loaded with simple storage')
+console.log('✅ Get-run function loaded with function storage')
 
 export const handler: Handler = async (event, context) => {
   if (event.httpMethod !== 'GET') {
@@ -25,9 +25,9 @@ export const handler: Handler = async (event, context) => {
       }
     }
 
-    console.log('Attempting to get run from Blobs...')
+    console.log('Attempting to get run via function storage...')
     const run = await getRun(tenantId, period)
-    console.log('Run retrieved:', run ? 'Found' : 'Not found')
+    console.log('Run retrieved via function storage:', run ? 'Found' : 'Not found')
 
     if (!run) {
       return {

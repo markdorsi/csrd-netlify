@@ -1,7 +1,7 @@
 import type { Handler } from '@netlify/functions'
-import { listRuns } from '../../src/lib/simple-storage'
+import { listRuns } from '../../src/lib/function-storage'
 
-console.log('✅ List-runs function loaded with simple storage')
+console.log('✅ List-runs function loaded with function storage')
 
 export const handler: Handler = async (event, context) => {
   if (event.httpMethod !== 'GET') {
