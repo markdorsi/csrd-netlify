@@ -4,22 +4,28 @@ import type { Tenant, EmissionRun, Factors } from './types';
 const STORE_NAME = 'emissions-estimator';
 
 function getBlobStore() {
-  // Use global store for production, deploy store for other environments
-  // Check both CONTEXT and NODE_ENV for environment detection
-  const isProduction = process.env.CONTEXT === 'production' || process.env.NODE_ENV === 'production';
-
   console.log('Blob store environment:', {
     CONTEXT: process.env.CONTEXT,
     NODE_ENV: process.env.NODE_ENV,
-    isProduction
+    DEPLOY_ID: process.env.DEPLOY_ID,
+    SITE_ID: process.env.SITE_ID
   });
 
-  if (typeof window === 'undefined' && isProduction) {
-    console.log('Using global store for production');
-    return getStore(STORE_NAME);
+  // Always use global store for simplicity in production
+  // This avoids deployment-specific storage issues
+  if (typeof window === 'undefined') {
+    console.log('Using global store (server-side)');
+    try {
+      return getStore(STORE_NAME);
+    } catch (error) {
+      console.error('Failed to create global store, falling back to deploy store:', error);
+      // Fallback to deploy store if global store fails
+      return getDeployStore(STORE_NAME);
+    }
   }
 
-  console.log('Using deploy store for development/preview');
+  // This shouldn't be called from client-side, but just in case
+  console.log('Using deploy store (client-side fallback)');
   return getDeployStore(STORE_NAME);
 }
 
