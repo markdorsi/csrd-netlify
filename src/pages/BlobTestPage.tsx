@@ -84,6 +84,107 @@ export default function BlobTestPage() {
     }
   }
 
+  const testSimpleWrite = async () => {
+    setLoading(true)
+    setResult('')
+    try {
+      const testData = {
+        message: 'Hello Simple Storage!',
+        timestamp: new Date().toISOString(),
+        testId: Math.random().toString(36).substring(7)
+      }
+
+      const response = await fetch('/api/simple-storage-test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'write',
+          data: testData
+        })
+      })
+
+      const responseData = await response.json()
+
+      if (response.ok) {
+        setResult(`✅ Simple write successful: ${JSON.stringify(responseData, null, 2)}`)
+      } else {
+        setResult(`❌ Simple write failed: ${JSON.stringify(responseData, null, 2)}`)
+      }
+    } catch (error) {
+      setResult(`❌ Simple write error: ${(error as Error).message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const testSimpleRead = async () => {
+    setLoading(true)
+    setResult('')
+    try {
+      const response = await fetch('/api/simple-storage-test?action=read', {
+        method: 'GET'
+      })
+
+      const responseData = await response.json()
+
+      if (response.ok) {
+        setResult(`✅ Simple read successful: ${JSON.stringify(responseData, null, 2)}`)
+      } else {
+        setResult(`❌ Simple read failed: ${JSON.stringify(responseData, null, 2)}`)
+      }
+    } catch (error) {
+      setResult(`❌ Simple read error: ${(error as Error).message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const testSimpleList = async () => {
+    setLoading(true)
+    setResult('')
+    try {
+      const response = await fetch('/api/simple-storage-test?action=list', {
+        method: 'GET'
+      })
+
+      const responseData = await response.json()
+
+      if (response.ok) {
+        setResult(`✅ Simple list successful: ${JSON.stringify(responseData, null, 2)}`)
+      } else {
+        setResult(`❌ Simple list failed: ${JSON.stringify(responseData, null, 2)}`)
+      }
+    } catch (error) {
+      setResult(`❌ Simple list error: ${(error as Error).message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const testEnv = async () => {
+    setLoading(true)
+    setResult('')
+    try {
+      const response = await fetch('/api/simple-storage-test?action=env', {
+        method: 'GET'
+      })
+
+      const responseData = await response.json()
+
+      if (response.ok) {
+        setResult(`✅ Environment check successful: ${JSON.stringify(responseData, null, 2)}`)
+      } else {
+        setResult(`❌ Environment check failed: ${JSON.stringify(responseData, null, 2)}`)
+      }
+    } catch (error) {
+      setResult(`❌ Environment check error: ${(error as Error).message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div>
       <header className="header">
@@ -104,6 +205,7 @@ export default function BlobTestPage() {
             This page tests the Netlify Blobs functionality to debug storage issues.
           </p>
 
+          <h3>Netlify Blobs Test</h3>
           <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
             <button
               className="btn btn-primary"
@@ -127,6 +229,41 @@ export default function BlobTestPage() {
               disabled={loading}
             >
               {loading ? 'Listing...' : '📋 List Blobs'}
+            </button>
+          </div>
+
+          <h3>Simple Storage Test (Fallback)</h3>
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-primary"
+              onClick={testSimpleWrite}
+              disabled={loading}
+            >
+              {loading ? 'Writing...' : '💾 Simple Write'}
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={testSimpleRead}
+              disabled={loading}
+            >
+              {loading ? 'Reading...' : '🔍 Simple Read'}
+            </button>
+
+            <button
+              className="btn btn-outline"
+              onClick={testSimpleList}
+              disabled={loading}
+            >
+              {loading ? 'Listing...' : '📄 Simple List'}
+            </button>
+
+            <button
+              className="btn btn-outline"
+              onClick={testEnv}
+              disabled={loading}
+            >
+              {loading ? 'Checking...' : '🔬 Check Environment'}
             </button>
           </div>
 

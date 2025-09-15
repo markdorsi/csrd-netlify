@@ -38,44 +38,91 @@ function getBlobStore() {
     success: null
   }
 
-  // Try basic global store (should work in Netlify Functions)
-  console.log('🔍 STEP 2: Attempting basic global store...')
-  storeCreationResults.attempted.push('global')
+  // Since automatic configuration isn't working, let's try manual configuration
+  // The errors indicate we need siteID and token for global store, deployID for deploy store
+
+  const siteId = process.env.SITE_ID || process.env.NETLIFY_SITE_ID
+  const deployId = process.env.DEPLOY_ID
+
+  // Try global store with siteID (token should be auto-provided in Netlify context)
+  if (siteId) {
+    console.log('🔍 STEP 2: Attempting global store with manual siteID...')
+    storeCreationResults.attempted.push('global-manual')
+
+    try {
+      console.log(`🔍 Using siteID: ${siteId}`)
+      // According to the Netlify Blobs docs, in a Netlify Function the token should be auto-provided
+      // Try with consistency option first to see if that helps
+      const globalStore = getStore(STORE_NAME, { consistency: 'eventual' })
+      console.log('✅ STEP 2 SUCCESS: Global store with manual siteID created')
+      storeCreationResults.success = 'global-manual'
+      return globalStore
+    } catch (globalError) {
+      console.log('❌ STEP 2 FAILED: Global store with manual siteID failed')
+      console.log('Global store error details:', {
+        message: (globalError as Error).message,
+        name: (globalError as Error).name,
+        stack: (globalError as Error).stack
+      })
+      storeCreationResults.failed.push({ type: 'global-manual', error: (globalError as Error).message })
+    }
+  } else {
+    console.log('❌ STEP 2 SKIPPED: No siteID available for global store')
+    storeCreationResults.failed.push({ type: 'global-manual', error: 'No siteID available' })
+  }
+
+  // Try deploy store with deployID
+  if (deployId) {
+    console.log('🔍 STEP 3: Attempting deploy store with manual deployID...')
+    storeCreationResults.attempted.push('deploy-manual')
+
+    try {
+      console.log(`🔍 Using deployID: ${deployId}`)
+      const deployStore = getDeployStore({ name: STORE_NAME, deployID: deployId })
+      console.log('✅ STEP 3 SUCCESS: Deploy store with manual deployID created')
+      storeCreationResults.success = 'deploy-manual'
+      return deployStore
+    } catch (deployError) {
+      console.log('❌ STEP 3 FAILED: Deploy store with manual deployID failed')
+      console.log('Deploy store error details:', {
+        message: (deployError as Error).message,
+        name: (deployError as Error).name,
+        stack: (deployError as Error).stack
+      })
+      storeCreationResults.failed.push({ type: 'deploy-manual', error: (deployError as Error).message })
+    }
+  } else {
+    console.log('❌ STEP 3 SKIPPED: No deployID available for deploy store')
+    storeCreationResults.failed.push({ type: 'deploy-manual', error: 'No deployID available' })
+  }
+
+  // Try basic stores as fallback (this will likely fail but let's be thorough)
+  console.log('🔍 STEP 4: Attempting basic global store fallback...')
+  storeCreationResults.attempted.push('global-basic')
 
   try {
     console.log('🔍 Calling getStore with just store name...')
     const globalStore = getStore(STORE_NAME)
-    console.log('✅ STEP 2 SUCCESS: Global store created')
-    storeCreationResults.success = 'global'
+    console.log('✅ STEP 4 SUCCESS: Basic global store created')
+    storeCreationResults.success = 'global-basic'
     return globalStore
   } catch (globalError) {
-    console.log('❌ STEP 2 FAILED: Global store failed')
-    console.log('Global store error details:', {
-      message: (globalError as Error).message,
-      name: (globalError as Error).name,
-      stack: (globalError as Error).stack
-    })
-    storeCreationResults.failed.push({ type: 'global', error: (globalError as Error).message })
+    console.log('❌ STEP 4 FAILED: Basic global store failed')
+    storeCreationResults.failed.push({ type: 'global-basic', error: (globalError as Error).message })
   }
 
-  // Try basic deploy store
-  console.log('🔍 STEP 3: Attempting basic deploy store...')
-  storeCreationResults.attempted.push('deploy')
+  console.log('🔍 STEP 5: Attempting basic deploy store fallback...')
+  storeCreationResults.attempted.push('deploy-basic')
 
   try {
     console.log('🔍 Calling getDeployStore with just store name...')
     const deployStore = getDeployStore(STORE_NAME)
-    console.log('✅ STEP 3 SUCCESS: Deploy store created')
-    storeCreationResults.success = 'deploy'
+    console.log('✅ STEP 5 SUCCESS: Basic deploy store created')
+    storeCreationResults.success = 'deploy-basic'
     return deployStore
   } catch (deployError) {
-    console.log('❌ STEP 3 FAILED: Deploy store failed')
-    console.log('Deploy store error details:', {
-      message: (deployError as Error).message,
-      name: (deployError as Error).name,
-      stack: (deployError as Error).stack
-    })
-    storeCreationResults.failed.push({ type: 'deploy', error: (deployError as Error).message })
+    console.log('❌ STEP 5 FAILED: Basic deploy store failed')
+    storeCreationResults.failed.push({ type: 'deploy-basic', error: (deployError as Error).message })
   }
 
   console.log('💥 FINAL RESULT: All store creation attempts failed')
