@@ -12,6 +12,8 @@ export const handler: Handler = async (event, context) => {
   try {
     const { tenant_id: tenantId, period } = event.queryStringParameters || {}
 
+    console.log('Get run request:', { tenantId, period })
+
     if (!tenantId || !period) {
       return {
         statusCode: 400,
@@ -21,7 +23,9 @@ export const handler: Handler = async (event, context) => {
       }
     }
 
+    console.log('Attempting to get run from Blobs...')
     const run = await getRun(tenantId, period)
+    console.log('Run retrieved:', run ? 'Found' : 'Not found')
 
     if (!run) {
       return {
@@ -43,11 +47,13 @@ export const handler: Handler = async (event, context) => {
     }
   } catch (error) {
     console.error('Get run error:', error)
+    console.error('Error stack:', (error as Error).stack)
     return {
       statusCode: 500,
       body: JSON.stringify({
         error: 'Failed to retrieve run',
-        message: (error as Error).message
+        message: (error as Error).message,
+        stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
       })
     }
   }

@@ -5,9 +5,21 @@ const STORE_NAME = 'emissions-estimator';
 
 function getBlobStore() {
   // Use global store for production, deploy store for other environments
-  if (typeof window === 'undefined' && process.env.CONTEXT === 'production') {
+  // Check both CONTEXT and NODE_ENV for environment detection
+  const isProduction = process.env.CONTEXT === 'production' || process.env.NODE_ENV === 'production';
+
+  console.log('Blob store environment:', {
+    CONTEXT: process.env.CONTEXT,
+    NODE_ENV: process.env.NODE_ENV,
+    isProduction
+  });
+
+  if (typeof window === 'undefined' && isProduction) {
+    console.log('Using global store for production');
     return getStore(STORE_NAME);
   }
+
+  console.log('Using deploy store for development/preview');
   return getDeployStore(STORE_NAME);
 }
 
@@ -30,9 +42,19 @@ export async function saveRun(run: EmissionRun): Promise<void> {
 }
 
 export async function getRun(tenantId: string, period: string): Promise<EmissionRun | null> {
-  const store = getBlobStore();
-  const key = `runs/${tenantId}/${period}.json`;
-  return await store.get(key, { type: 'json' });
+  try {
+    const store = getBlobStore();
+    const key = `runs/${tenantId}/${period}.json`;
+    console.log('Attempting to get blob with key:', key);
+
+    const result = await store.get(key, { type: 'json' });
+    console.log('Blob get result:', result ? 'Found' : 'Null');
+
+    return result;
+  } catch (error) {
+    console.error('Error getting run from blobs:', error);
+    throw error;
+  }
 }
 
 export async function listRuns(tenantId: string): Promise<string[]> {
