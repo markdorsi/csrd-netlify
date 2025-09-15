@@ -185,6 +185,101 @@ export default function BlobTestPage() {
     }
   }
 
+  const testPersistentWrite = async () => {
+    setLoading(true)
+    setResult('')
+    try {
+      const testData = {
+        message: 'Hello Persistent Storage!',
+        timestamp: new Date().toISOString(),
+        testId: Math.random().toString(36).substring(7),
+        type: 'emissions-test'
+      }
+
+      const response = await fetch('/.netlify/functions/storage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          operation: 'set',
+          key: 'test/emissions-data',
+          value: testData
+        })
+      })
+
+      const responseData = await response.json()
+
+      if (response.ok) {
+        setResult(`✅ Persistent write successful: ${JSON.stringify(responseData, null, 2)}`)
+      } else {
+        setResult(`❌ Persistent write failed: ${JSON.stringify(responseData, null, 2)}`)
+      }
+    } catch (error) {
+      setResult(`❌ Persistent write error: ${(error as Error).message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const testPersistentRead = async () => {
+    setLoading(true)
+    setResult('')
+    try {
+      const response = await fetch('/.netlify/functions/storage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          operation: 'get',
+          key: 'test/emissions-data'
+        })
+      })
+
+      const responseData = await response.json()
+
+      if (response.ok || response.status === 404) {
+        setResult(`✅ Persistent read successful: ${JSON.stringify(responseData, null, 2)}`)
+      } else {
+        setResult(`❌ Persistent read failed: ${JSON.stringify(responseData, null, 2)}`)
+      }
+    } catch (error) {
+      setResult(`❌ Persistent read error: ${(error as Error).message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const testPersistentList = async () => {
+    setLoading(true)
+    setResult('')
+    try {
+      const response = await fetch('/.netlify/functions/storage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          operation: 'list',
+          prefix: 'test/'
+        })
+      })
+
+      const responseData = await response.json()
+
+      if (response.ok) {
+        setResult(`✅ Persistent list successful: ${JSON.stringify(responseData, null, 2)}`)
+      } else {
+        setResult(`❌ Persistent list failed: ${JSON.stringify(responseData, null, 2)}`)
+      }
+    } catch (error) {
+      setResult(`❌ Persistent list error: ${(error as Error).message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div>
       <header className="header">
@@ -264,6 +359,33 @@ export default function BlobTestPage() {
               disabled={loading}
             >
               {loading ? 'Checking...' : '🔬 Check Environment'}
+            </button>
+          </div>
+
+          <h3>Persistent Storage Test (Production Ready)</h3>
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-primary"
+              onClick={testPersistentWrite}
+              disabled={loading}
+            >
+              {loading ? 'Writing...' : '🗄️ Persistent Write'}
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={testPersistentRead}
+              disabled={loading}
+            >
+              {loading ? 'Reading...' : '📚 Persistent Read'}
+            </button>
+
+            <button
+              className="btn btn-outline"
+              onClick={testPersistentList}
+              disabled={loading}
+            >
+              {loading ? 'Listing...' : '📦 Persistent List'}
             </button>
           </div>
 

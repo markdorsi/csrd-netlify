@@ -1,6 +1,8 @@
 import type { Handler } from '@netlify/functions'
-import { saveRun, saveTenant } from '../../src/lib/blobs'
+import { saveRun, saveTenant } from '../../src/lib/simple-storage'
 import type { EmissionRun, Tenant } from '../../src/lib/types'
+
+console.log('✅ Save-run function loaded with simple storage')
 
 export const handler: Handler = async (event, context) => {
   if (event.httpMethod !== 'POST') {

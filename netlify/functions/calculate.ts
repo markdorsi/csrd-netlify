@@ -3,6 +3,8 @@ import { calculate, validateInputs } from '../../src/lib/calculations'
 import { validateFactors } from '../../src/lib/factors'
 import type { Inputs, Factors } from '../../src/lib/types'
 
+console.log('✅ Calculate function loaded successfully')
+
 export const handler: Handler = async (event, context) => {
   if (event.httpMethod !== 'POST') {
     return {
