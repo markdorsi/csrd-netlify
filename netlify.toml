@@ -1,12 +1,13 @@
 [build]
-  publish = "public"
-  command = ""
+  publish = "dist"
+  command = "npm run build"
+  functions = "netlify/functions"
 
 [context.deploy-preview]
-  command = ""
-  
+  command = "npm run build"
+
 [context.branch-deploy]
-  command = ""
+  command = "npm run build"
 
 # Automatic deploy previews for all branches and PRs
 [build.processing]

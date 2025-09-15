@@ -3,6 +3,10 @@
     "dependencies",
     "github_auth",
     "git_init",
-    "project_structure"
+    "project_structure",
+    "ci_setup",
+    "security_protection",
+    "mcp_setup",
+    "workflow_test"
   ]
 }
