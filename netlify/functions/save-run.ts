@@ -31,7 +31,7 @@ export const handler: Handler = async (event, context) => {
     }
 
     try {
-      const tenantResponse = await fetch('/.netlify/functions/storage', {
+      const tenantResponse = await fetch(`${process.env.URL || 'https://csrd-netlify-518748.netlify.app'}/.netlify/functions/storage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -54,7 +54,7 @@ export const handler: Handler = async (event, context) => {
       version: 1
     }
 
-    const runResponse = await fetch('/.netlify/functions/storage', {
+    const runResponse = await fetch(`${process.env.URL || 'https://csrd-netlify-518748.netlify.app'}/.netlify/functions/storage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

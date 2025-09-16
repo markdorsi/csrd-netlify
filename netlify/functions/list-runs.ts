@@ -22,7 +22,7 @@ export const handler: Handler = async (event, context) => {
       }
     }
 
-    const listResponse = await fetch('/.netlify/functions/storage', {
+    const listResponse = await fetch(`${process.env.URL || 'https://csrd-netlify-518748.netlify.app'}/.netlify/functions/storage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
