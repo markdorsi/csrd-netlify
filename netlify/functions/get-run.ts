@@ -1,7 +1,7 @@
 import type { Handler } from '@netlify/functions'
-import { getRun } from '../../src/lib/function-storage'
+import { getRun } from '../../src/lib/hybrid-storage'
 
-console.log('✅ Get-run function loaded with function storage')
+console.log('✅ Get-run function loaded with hybrid storage')
 
 export const handler: Handler = async (event, context) => {
   if (event.httpMethod !== 'GET') {
@@ -25,9 +25,9 @@ export const handler: Handler = async (event, context) => {
       }
     }
 
-    console.log('Attempting to get run via function storage...')
+    console.log('Attempting to get run via hybrid storage...')
     const run = await getRun(tenantId, period)
-    console.log('Run retrieved via function storage:', run ? 'Found' : 'Not found')
+    console.log('Run retrieved via hybrid storage:', run ? 'Found' : 'Not found')
 
     if (!run) {
       return {

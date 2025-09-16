@@ -1,8 +1,5 @@
 import type { Handler } from '@netlify/functions'
-
-// In-memory storage (persists across function invocations within the same container)
-// This is a simple approach that works reliably on Netlify
-let persistentStorage: Record<string, any> = {}
+import { getEmissionsStore } from '../../src/lib/hybrid-storage'
 
 // Storage operations
 interface StorageRequest {
@@ -13,10 +10,12 @@ interface StorageRequest {
 }
 
 export const handler: Handler = async (event, context) => {
-  console.log('🗄️ Storage function called:', {
+  console.log('🗄️ Hybrid storage function called:', {
     method: event.httpMethod,
     path: event.path
   })
+
+  const store = getEmissionsStore()
 
   try {
     let request: StorageRequest
@@ -32,7 +31,7 @@ export const handler: Handler = async (event, context) => {
       }
     }
 
-    console.log('Storage request:', { operation: request.operation, key: request.key })
+    console.log('Hybrid storage request:', { operation: request.operation, key: request.key })
 
     switch (request.operation) {
       case 'set': {
@@ -47,12 +46,10 @@ export const handler: Handler = async (event, context) => {
           }
         }
 
-        persistentStorage[request.key] = {
-          value: request.value,
-          timestamp: new Date().toISOString()
-        }
+        await store.set(request.key, request.value)
+        const timestamp = new Date().toISOString()
 
-        console.log(`✅ Stored key: ${request.key}`)
+        console.log(`✅ Stored key via hybrid storage: ${request.key}`)
 
         return {
           statusCode: 200,
@@ -61,7 +58,7 @@ export const handler: Handler = async (event, context) => {
             success: true,
             operation: 'set',
             key: request.key,
-            stored_at: persistentStorage[request.key].timestamp
+            stored_at: timestamp
           })
         }
       }
@@ -78,10 +75,10 @@ export const handler: Handler = async (event, context) => {
           }
         }
 
-        const stored = persistentStorage[request.key]
-        const found = stored !== undefined
+        const value = await store.get(request.key)
+        const found = value !== null
 
-        console.log(`📖 Get key: ${request.key}, found: ${found}`)
+        console.log(`📖 Get key via hybrid storage: ${request.key}, found: ${found}`)
 
         return {
           statusCode: found ? 200 : 404,
@@ -90,8 +87,8 @@ export const handler: Handler = async (event, context) => {
             success: found,
             operation: 'get',
             key: request.key,
-            value: found ? stored.value : null,
-            stored_at: found ? stored.timestamp : null,
+            value: value,
+            stored_at: found ? new Date().toISOString() : null,
             found
           })
         }
@@ -109,10 +106,14 @@ export const handler: Handler = async (event, context) => {
           }
         }
 
-        const existed = persistentStorage[request.key] !== undefined
-        delete persistentStorage[request.key]
+        const existingValue = await store.get(request.key)
+        const existed = existingValue !== null
 
-        console.log(`🗑️ Delete key: ${request.key}, existed: ${existed}`)
+        if (existed) {
+          await store.delete(request.key)
+        }
+
+        console.log(`🗑️ Delete key via hybrid storage: ${request.key}, existed: ${existed}`)
 
         return {
           statusCode: 200,
@@ -128,19 +129,9 @@ export const handler: Handler = async (event, context) => {
 
       case 'list': {
         const prefix = request.prefix || ''
-        const matchingKeys = Object.keys(persistentStorage).filter(key =>
-          key.startsWith(prefix)
-        )
+        const results = await store.list(prefix)
 
-        const results = matchingKeys.map(key => ({
-          key,
-          stored_at: persistentStorage[key].timestamp,
-          preview: typeof persistentStorage[key].value === 'object'
-            ? Object.keys(persistentStorage[key].value).slice(0, 3)
-            : String(persistentStorage[key].value).substring(0, 50)
-        }))
-
-        console.log(`📋 List with prefix: "${prefix}", found: ${results.length} keys`)
+        console.log(`📋 List via hybrid storage with prefix: "${prefix}", found: ${results.length} keys`)
 
         return {
           statusCode: 200,
@@ -151,7 +142,7 @@ export const handler: Handler = async (event, context) => {
             prefix,
             count: results.length,
             keys: results,
-            total_stored: Object.keys(persistentStorage).length
+            cache_stats: store.getCacheStats()
           })
         }
       }
@@ -170,15 +161,16 @@ export const handler: Handler = async (event, context) => {
     }
 
   } catch (error) {
-    console.error('💥 Storage function error:', error)
+    console.error('💥 Hybrid storage function error:', error)
 
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         success: false,
-        error: 'Storage operation failed',
-        message: (error as Error).message
+        error: 'Hybrid storage operation failed',
+        message: (error as Error).message,
+        stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
       })
     }
   }
