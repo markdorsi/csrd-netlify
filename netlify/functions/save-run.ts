@@ -1,8 +1,7 @@
 import type { Handler } from '@netlify/functions'
-import { saveRun, saveTenant } from '../../src/lib/hybrid-storage'
 import type { EmissionRun, Tenant } from '../../src/lib/types'
 
-console.log('✅ Save-run function loaded with hybrid storage')
+console.log('✅ Save-run function loaded')
 
 export const handler: Handler = async (event, context) => {
   if (event.httpMethod !== 'POST') {
@@ -23,7 +22,7 @@ export const handler: Handler = async (event, context) => {
       }
     }
 
-    // Save the tenant information if it doesn't exist
+    // Save the tenant information via storage function
     const tenant: Tenant = {
       tenant_id: run.tenant_id,
       tenant_name: run.tenant_id.toUpperCase(), // Default to ID as name
@@ -32,13 +31,45 @@ export const handler: Handler = async (event, context) => {
     }
 
     try {
-      await saveTenant(tenant)
+      const tenantResponse = await fetch('/.netlify/functions/storage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operation: 'set',
+          key: `tenants/${tenant.tenant_id}`,
+          value: tenant
+        })
+      })
+      if (!tenantResponse.ok) {
+        console.warn('Failed to save tenant:', await tenantResponse.text())
+      }
     } catch (error) {
       console.warn('Failed to save tenant (may already exist):', error)
     }
 
-    // Save the emission run
-    await saveRun(run)
+    // Save the emission run via storage function
+    const runWithMetadata = {
+      ...run,
+      saved_at: new Date().toISOString(),
+      version: 1
+    }
+
+    const runResponse = await fetch('/.netlify/functions/storage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operation: 'set',
+        key: `runs/${run.tenant_id}/${run.period}`,
+        value: runWithMetadata
+      })
+    })
+
+    if (!runResponse.ok) {
+      throw new Error(`Failed to save run: ${await runResponse.text()}`)
+    }
+
+    const saveResult = await runResponse.json()
+    console.log('Run saved via storage function:', saveResult)
 
     return {
       statusCode: 201,

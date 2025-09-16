@@ -1,7 +1,6 @@
 import type { Handler } from '@netlify/functions'
-import { listRuns } from '../../src/lib/hybrid-storage'
 
-console.log('✅ List-runs function loaded with hybrid storage')
+console.log('✅ List-runs function loaded')
 
 export const handler: Handler = async (event, context) => {
   if (event.httpMethod !== 'GET') {
@@ -23,7 +22,24 @@ export const handler: Handler = async (event, context) => {
       }
     }
 
-    const periods = await listRuns(tenantId)
+    const listResponse = await fetch('/.netlify/functions/storage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operation: 'list',
+        prefix: `runs/${tenantId}/`
+      })
+    })
+
+    if (!listResponse.ok) {
+      throw new Error(`Storage function error: ${listResponse.status}`)
+    }
+
+    const listResult = await listResponse.json()
+    const periods = listResult.keys
+      .filter((item: any) => item.key.startsWith(`runs/${tenantId}/`))
+      .map((item: any) => item.key.replace(`runs/${tenantId}/`, ''))
+      .sort()
 
     return {
       statusCode: 200,
